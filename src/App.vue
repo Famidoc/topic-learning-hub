@@ -559,6 +559,7 @@ onMounted(async () => {
     cursor: pointer;
     width: 44px;
     height: 44px;
+    padding: 0 !important; /* 重設全域按鈕的 padding，防止內部的 SVG 被擠壓成 0 寬度 */
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -626,6 +627,7 @@ onMounted(async () => {
     cursor: pointer;
     width: 32px;
     height: 32px;
+    padding: 0 !important; /* 重設全域按鈕的 padding，防止關閉圖標被擠壓 */
     border-radius: 6px;
     display: flex;
     align-items: center;
