@@ -557,12 +557,16 @@ onMounted(async () => {
     border: none;
     color: var(--text-primary);
     cursor: pointer;
-    width: 38px;
-    height: 38px;
-    border-radius: 6px;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  
+  .btn-hamburger svg {
+    stroke: var(--text-primary) !important;
   }
   
   .btn-hamburger:hover {
@@ -584,7 +588,7 @@ onMounted(async () => {
   }
   
   .mobile-header-spacer {
-    width: 38px; /* 用於平衡左邊漢堡按鈕的佔位 */
+    width: 44px; /* 對齊左側 44px 漢堡按鈕，以維持 Logo 置中 */
   }
 
   /* 手機版側邊欄背景遮罩 */

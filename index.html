@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>萬用主題學習手冊建構器 - Topic Learning Hub</title>
+    <!-- PWA 與 iOS 應用設定 -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TopicHub">
+    <link rel="apple-touch-icon" href="./favicon.svg">
     <!-- 引入 Google Fonts: Outfit 與 Noto Sans TC -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,5 +23,16 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
+    <!-- 註冊 Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // 使用相對路徑註冊，確保能正確在 GitHub Pages 子路徑 /topic-learning-hub/ 下運作
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('PWA Service Worker 註冊成功', reg))
+            .catch(err => console.error('PWA Service Worker 註冊失敗', err));
+        });
+      }
+    </script>
   </body>
 </html>
