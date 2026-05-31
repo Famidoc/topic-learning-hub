@@ -886,8 +886,16 @@ const saveToDrive = async () => {
     white-space: nowrap;
   }
   
+  .reader-content-layout {
+    display: block;
+    width: 100%;
+  }
+
   .main-document {
     padding: 1.25rem 1rem;
+    width: 100% !important;
+    box-sizing: border-box;
+    min-width: 0;
   }
   
   /* 標籤頁自適應滾動 */
