@@ -1,0 +1,19 @@
+{
+  "name": "萬用主題學習手冊建構器",
+  "short_name": "TopicHub",
+  "description": "用戶輸入任一主題，系統會生成結構化的學習手冊，並直接與 Google Drive 整合儲存。",
+  "start_url": "/topic-learning-hub/",
+  "scope": "/topic-learning-hub/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0e17",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
