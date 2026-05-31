@@ -820,4 +820,103 @@ const saveToDrive = async () => {
   from { opacity: 0; max-height: 0; overflow: hidden; }
   to { opacity: 1; max-height: 1000px; }
 }
+
+/* ================= 響應式微調 (RWD) ================= */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem 0.75rem;
+    gap: 1.25rem;
+  }
+  
+  /* 歡迎區優化 */
+  .welcome-section {
+    padding: 3rem 1rem;
+    gap: 1rem;
+  }
+  
+  .welcome-section h1 {
+    font-size: 1.8rem;
+  }
+  
+  .welcome-lead {
+    font-size: 0.95rem;
+  }
+  
+  .search-box {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .search-box input {
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .btn-generate {
+    width: 100%;
+    padding: 0.75rem;
+  }
+  
+  /* 閱讀介面優化 */
+  .reader-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem 1rem;
+    gap: 1rem;
+  }
+  
+  .handbook-meta {
+    min-width: 0;
+  }
+  
+  .handbook-meta h1 {
+    font-size: 1.4rem;
+  }
+  
+  .reader-actions {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .reader-actions button {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.5rem;
+    white-space: nowrap;
+  }
+  
+  .main-document {
+    padding: 1.25rem 1rem;
+  }
+  
+  /* 標籤頁自適應滾動 */
+  .doc-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .doc-tabs .tab-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  
+  /* 核心概念卡片縮小縮排 */
+  .concept-brief, .concept-details {
+    padding-left: 0.5rem;
+  }
+  
+  .concept-num {
+    width: 26px;
+    height: 26px;
+    font-size: 0.95rem;
+  }
+  
+  .concept-header h3 {
+    font-size: 1rem;
+  }
+}
 </style>
