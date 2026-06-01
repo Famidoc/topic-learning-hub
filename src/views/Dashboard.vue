@@ -101,15 +101,36 @@
           </div>
 
           <div class="tab-content">
-            <!-- 編輯模式 (雙欄編輯 + 工具列) -->
+            <!-- 編輯模式 (Tiptap 所見即所得編輯器) -->
             <div v-if="isEditing && activeTab === 'readme'" class="editor-layout">
               <div class="editor-toolbar">
-                <button class="toolbar-btn" @click="insertFormat('u')" title="加底線">
+                <button class="toolbar-btn" :class="{ active: isActive('bold') }" @click="runCommand('bold')" title="粗體">
+                  <b>B</b>
+                </button>
+                <button class="toolbar-btn" :class="{ active: isActive('italic') }" @click="runCommand('italic')" title="斜體">
+                  <i>I</i>
+                </button>
+                <button class="toolbar-btn" :class="{ active: isActive('underline') }" @click="runCommand('underline')" title="底線">
                   <u>U</u>
                 </button>
-                <button class="toolbar-btn" @click="insertFormat('mark')" title="加黃底色">
-                  <span style="background-color: #fef08a; padding: 2px 6px; border-radius: 4px; color: black; font-size: 11px; font-weight: bold;">標記</span>
+                <button class="toolbar-btn" :class="{ active: isActive('highlight') }" @click="runCommand('highlight')" title="黃底標記">
+                  <span style="background-color: #fef08a; color: black; padding: 1px 4px; border-radius: 2px; font-size: 11px; font-weight: bold;">M</span>
                 </button>
+                <div class="toolbar-divider"></div>
+                <button class="toolbar-btn" :class="{ active: isActive('heading', { level: 2 }) }" @click="runCommand('h2')" title="標題 H2">
+                  H2
+                </button>
+                <button class="toolbar-btn" :class="{ active: isActive('heading', { level: 3 }) }" @click="runCommand('h3')" title="標題 H3">
+                  H3
+                </button>
+                <div class="toolbar-divider"></div>
+                <button class="toolbar-btn" :class="{ active: isActive('bulletList') }" @click="runCommand('bullet')" title="項目清單">
+                  • 清單
+                </button>
+                <button class="toolbar-btn" :class="{ active: isActive('orderedList') }" @click="runCommand('ordered')" title="編號清單">
+                  1. 清單
+                </button>
+                <div class="toolbar-divider"></div>
                 <button class="toolbar-btn" @click="triggerImageUpload" title="插入圖片">
                   🖼️ 圖片
                 </button>
@@ -121,15 +142,12 @@
                   @change="handleImageUpload"
                 />
               </div>
-              <div class="editor-panes">
-                <textarea 
-                  v-model="editContent" 
-                  ref="textareaRef"
-                  class="editor-textarea" 
-                  placeholder="在此以 Markdown 格式編輯手冊內容..."
-                ></textarea>
-                <div class="editor-preview markdown-body" v-html="renderedEditMarkdown"></div>
+              
+              <!-- Tiptap 編輯器內容掛載點 -->
+              <div class="editor-container">
+                <editor-content :editor="editor" class="tiptap-editor-content markdown-body" />
               </div>
+              
               <div class="editor-footer">
                 <button class="btn btn-primary" @click="saveEdit">儲存變更</button>
                 <button class="btn btn-secondary" @click="cancelEdit">放棄變更</button>
@@ -238,6 +256,14 @@ import { marked } from 'marked'
 import { generateLearningManual } from '../services/gemini'
 import { loginGoogleDrive, saveNotebookToDrive } from '../services/googleDrive'
 
+// Tiptap 編輯器核心與擴充
+import { Editor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import Highlight from '@tiptap/extension-highlight'
+import Image from '@tiptap/extension-image'
+import ImageResize from 'tiptap-extension-resize-image'
+
 const store = useAppStore()
 const router = useRouter()
 
@@ -253,32 +279,55 @@ const expandedConcepts = ref({})
 const isEditing = ref(false)
 const editContent = ref('')
 const isExporting = ref(false)
-const textareaRef = ref(null)
 const imageInputRef = ref(null)
 
-const renderedEditMarkdown = computed(() => {
-  return marked.parse(editContent.value)
-})
+// Tiptap 編輯器實例
+const editor = ref(null)
 
 const toggleEdit = () => {
   if (isEditing.value) {
     cancelEdit()
   } else {
     activeTab.value = 'readme' // 進入編輯模式時，強制到第一個 Tab
-    editContent.value = store.currentNotebook.content
+    
+    // 智慧相容：如果是 Markdown 語法，先轉成 HTML 以利 Tiptap 初始化
+    const initialContent = store.currentNotebook.content.trim().startsWith('<')
+      ? store.currentNotebook.content
+      : marked.parse(store.currentNotebook.content)
+      
+    editContent.value = initialContent
+    
+    // 初始化 Tiptap
+    editor.value = new Editor({
+      content: initialContent,
+      extensions: [
+        StarterKit,
+        Underline,
+        Highlight.configure({ multicolor: false }),
+        Image,
+        ImageResize
+      ],
+      onUpdate: ({ editor }) => {
+        editContent.value = editor.getHTML()
+      }
+    })
+    
     isEditing.value = true
   }
 }
 
 const cancelEdit = () => {
   if (confirm('確定要放棄所有未儲存的變更嗎？')) {
+    destroyEditor()
     isEditing.value = false
     editContent.value = ''
   }
 }
 
 const saveEdit = async () => {
-  store.currentNotebook.content = editContent.value
+  if (editor.value) {
+    store.currentNotebook.content = editor.value.getHTML()
+  }
   
   if (store.currentNotebook.id && !store.currentNotebook.id.startsWith('temp_')) {
     if (store.isAuthenticated) {
@@ -307,31 +356,41 @@ const saveEdit = async () => {
     alert('本地修改已儲存！')
   }
   
+  destroyEditor()
   isEditing.value = false
 }
 
-const insertFormat = (type) => {
-  const textarea = textareaRef.value
-  if (!textarea) return
-  
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const text = textarea.value
-  const selectedText = text.substring(start, end)
-  
-  let replacement = ''
-  if (type === 'u') {
-    replacement = `<u>${selectedText || '底線文字'}</u>`
-  } else if (type === 'mark') {
-    replacement = `<mark style="background-color: #fef08a;">${selectedText || '標記文字'}</mark>`
+const destroyEditor = () => {
+  if (editor.value) {
+    editor.value.destroy()
+    editor.value = null
   }
+}
+
+// 預防組件被銷毀時編輯器記憶體洩露
+import { onBeforeUnmount } from 'vue'
+onBeforeUnmount(() => {
+  destroyEditor()
+})
+
+// Tiptap 工具列指令與狀態判定
+const runCommand = (type) => {
+  if (!editor.value) return
+  editor.value.chain().focus()
   
-  editContent.value = text.substring(0, start) + replacement + text.substring(end)
-  
-  setTimeout(() => {
-    textarea.focus()
-    textarea.setSelectionRange(start + replacement.length, start + replacement.length)
-  }, 50)
+  if (type === 'bold') editor.value.toggleBold().run()
+  else if (type === 'italic') editor.value.toggleItalic().run()
+  else if (type === 'underline') editor.value.toggleUnderline().run()
+  else if (type === 'highlight') editor.value.toggleHighlight().run()
+  else if (type === 'h2') editor.value.toggleHeading({ level: 2 }).run()
+  else if (type === 'h3') editor.value.toggleHeading({ level: 3 }).run()
+  else if (type === 'bullet') editor.value.toggleBulletList().run()
+  else if (type === 'ordered') editor.value.toggleOrderedList().run()
+}
+
+const isActive = (type, attrs = {}) => {
+  if (!editor.value) return false
+  return editor.value.isActive(type, attrs)
 }
 
 const triggerImageUpload = () => {
@@ -347,20 +406,12 @@ const handleImageUpload = async (event) => {
     const { uploadImageToDrive } = await import('../services/googleDrive')
     const imageUrl = await uploadImageToDrive(file)
     
-    const textarea = textareaRef.value
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const text = textarea.value
-    const imgMarkdown = `\n![${file.name}](${imageUrl})\n`
+    // 直接以 Image Node 置入 Tiptap
+    if (editor.value) {
+      editor.value.chain().focus().setImage({ src: imageUrl }).run()
+    }
     
-    editContent.value = text.substring(0, start) + imgMarkdown + text.substring(end)
-    
-    setTimeout(() => {
-      textarea.focus()
-      textarea.setSelectionRange(start + imgMarkdown.length, start + imgMarkdown.length)
-    }, 50)
-    
-    alert('圖片上傳成功，已自動插入編輯器！')
+    alert('圖片上傳成功，已置入編輯器！')
   } catch (err) {
     console.error(err)
     alert('圖片上傳失敗: ' + err.message)
@@ -377,7 +428,9 @@ const exportDoc = async () => {
   store.startLoading('正在將手冊轉存為 Google Doc...')
   try {
     const { exportToGoogleDoc } = await import('../services/googleDrive')
-    const bodyHtml = marked.parse(store.currentNotebook.content)
+    
+    // 手冊本身已經是 HTML 格式
+    const bodyHtml = store.currentNotebook.content
     
     const fullHtml = `
       <!DOCTYPE html>
@@ -393,6 +446,7 @@ const exportDoc = async () => {
           u { text-decoration: underline; }
           mark { background-color: #fef08a; padding: 2px 4px; }
           blockquote { border-left: 4px solid #6366f1; padding: 10px; background-color: #f8fafc; color: #475569; font-style: italic; }
+          img { max-width: 100%; height: auto; display: block; margin: 15px 0; }
         </style>
       </head>
       <body>
@@ -433,7 +487,11 @@ const tabName = (tab) => {
 
 const renderedMarkdown = computed(() => {
   if (!store.currentNotebook || !store.currentNotebook.content) return ''
-  return marked.parse(store.currentNotebook.content)
+  const content = store.currentNotebook.content
+  if (content.trim().startsWith('<')) {
+    return content
+  }
+  return marked.parse(content)
 })
 
 const loginGoogle = () => {
@@ -1154,11 +1212,12 @@ const saveToDrive = async () => {
 
 .editor-toolbar {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   padding: 0.5rem;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
+  flex-wrap: wrap;
   flex-shrink: 0;
 }
 
@@ -1167,10 +1226,10 @@ const saveToDrive = async () => {
 }
 
 .toolbar-btn {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--text-primary);
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -1182,62 +1241,67 @@ const saveToDrive = async () => {
 
 .toolbar-btn:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: var(--accent-primary);
 }
 
-.editor-panes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  min-height: 450px;
-  height: 60vh;
+.toolbar-btn.active {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: var(--glow-effect);
 }
 
-@media (max-width: 992px) {
-  .editor-panes {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--glass-border);
+  align-self: center;
+  margin: 0 0.4rem;
 }
 
-.editor-textarea {
-  width: 100%;
-  height: 100%;
-  min-height: 300px;
-  resize: vertical;
-  background: rgba(0, 0, 0, 0.3);
+.editor-container {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-family: 'Consolas', 'Courier New', Courier, monospace;
-  font-size: 0.95rem;
-  padding: 1rem;
-  line-height: 1.5;
-  outline: none;
+  background: rgba(0, 0, 0, 0.3);
+  min-height: 450px;
+  height: 60vh;
+  overflow-y: auto;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
 }
 
-[data-theme="light"] .editor-textarea {
+[data-theme="light"] .editor-container {
   background: rgba(255, 255, 255, 0.9);
-  color: #0f172a;
 }
 
-.editor-textarea:focus {
+.editor-container:focus-within {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px var(--glass-border-focus);
 }
 
-.editor-preview {
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  padding: 1rem;
-  overflow-y: auto;
-  background: rgba(255, 255, 255, 0.01);
-  height: 100%;
-  min-height: 300px;
+/* Tiptap 編輯器內層焦點與樣式微調 */
+::v-deep(.tiptap-editor-content .ProseMirror) {
+  min-height: 430px;
+  padding: 1.5rem;
+  outline: none;
+  box-sizing: border-box;
 }
 
-[data-theme="light"] .editor-preview {
-  background: #ffffff;
+::v-deep(.tiptap-editor-content .ProseMirror > *) {
+  margin-bottom: 0.75rem;
+}
+
+/* 圖片拖拉與高亮樣式 */
+::v-deep(.tiptap-editor-content img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5rem 0;
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--transition-fast);
+}
+
+::v-deep(.tiptap-editor-content img.ProseMirror-selectednode) {
+  outline: 3px solid var(--accent-primary);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
 }
 
 .editor-footer {

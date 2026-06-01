@@ -11,8 +11,13 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@tiptap/extension-highlight": "^3.24.0",
+    "@tiptap/extension-underline": "^3.24.0",
+    "@tiptap/starter-kit": "^3.24.0",
+    "@tiptap/vue-3": "^3.24.0",
     "marked": "^15.0.0",
     "pinia": "^2.3.0",
+    "tiptap-extension-resize-image": "^1.4.0",
     "vue": "^3.5.34",
     "vue-router": "^4.5.0"
   },
