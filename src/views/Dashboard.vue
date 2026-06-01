@@ -376,16 +376,17 @@ onBeforeUnmount(() => {
 // Tiptap 工具列指令與狀態判定
 const runCommand = (type) => {
   if (!editor.value) return
-  editor.value.chain().focus()
   
-  if (type === 'bold') editor.value.toggleBold().run()
-  else if (type === 'italic') editor.value.toggleItalic().run()
-  else if (type === 'underline') editor.value.toggleUnderline().run()
-  else if (type === 'highlight') editor.value.toggleHighlight().run()
-  else if (type === 'h2') editor.value.toggleHeading({ level: 2 }).run()
-  else if (type === 'h3') editor.value.toggleHeading({ level: 3 }).run()
-  else if (type === 'bullet') editor.value.toggleBulletList().run()
-  else if (type === 'ordered') editor.value.toggleOrderedList().run()
+  const chain = editor.value.chain().focus()
+  
+  if (type === 'bold') chain.toggleBold().run()
+  else if (type === 'italic') chain.toggleItalic().run()
+  else if (type === 'underline') chain.toggleUnderline().run()
+  else if (type === 'highlight') chain.toggleHighlight().run()
+  else if (type === 'h2') chain.toggleHeading({ level: 2 }).run()
+  else if (type === 'h3') chain.toggleHeading({ level: 3 }).run()
+  else if (type === 'bullet') chain.toggleBulletList().run()
+  else if (type === 'ordered') chain.toggleOrderedList().run()
 }
 
 const isActive = (type, attrs = {}) => {
