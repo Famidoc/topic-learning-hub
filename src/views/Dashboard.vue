@@ -63,11 +63,20 @@
             {{ store.currentNotebook.meta.description }}
           </p>
         </div>
-        <div class="reader-actions">
-          <button class="btn btn-secondary" @click="closeNotebook">
+        <div class="reader-actions no-print">
+          <button class="btn btn-secondary" @click="closeNotebook" v-if="!isEditing">
             返回首頁
           </button>
-          <button class="btn btn-primary" @click="saveToDrive" :disabled="isSaving">
+          <button class="btn btn-secondary" @click="toggleEdit">
+            {{ isEditing ? '取消編輯' : '編輯手冊' }}
+          </button>
+          <button class="btn btn-secondary" @click="exportDoc" :disabled="isExporting" v-if="store.isAuthenticated && !isEditing">
+            匯出 Google Doc
+          </button>
+          <button class="btn btn-secondary" @click="exportPDF" v-if="!isEditing">
+            下載 PDF
+          </button>
+          <button class="btn btn-primary" @click="saveToDrive" :disabled="isSaving" v-if="!isEditing">
             <svg v-if="isSaving" class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)"/>
               <path d="M12 2a10 10 0 0 1 10 10"/>
@@ -80,7 +89,7 @@
       <!-- 手冊主要內容區域 -->
       <div class="reader-content-layout">
         <div class="glass-panel main-document">
-          <div class="doc-tabs">
+          <div class="doc-tabs" v-if="!isEditing">
             <button 
               v-for="tab in ['readme', 'concepts', 'misconceptions']" 
               :key="tab"
@@ -92,11 +101,46 @@
           </div>
 
           <div class="tab-content">
-            <!-- Tab 1: 學習地圖 Markdown -->
-            <div v-if="activeTab === 'readme'" class="markdown-body" v-html="renderedMarkdown"></div>
+            <!-- 編輯模式 (雙欄編輯 + 工具列) -->
+            <div v-if="isEditing && activeTab === 'readme'" class="editor-layout">
+              <div class="editor-toolbar">
+                <button class="toolbar-btn" @click="insertFormat('u')" title="加底線">
+                  <u>U</u>
+                </button>
+                <button class="toolbar-btn" @click="insertFormat('mark')" title="加黃底色">
+                  <span style="background-color: #fef08a; padding: 2px 6px; border-radius: 4px; color: black; font-size: 11px; font-weight: bold;">標記</span>
+                </button>
+                <button class="toolbar-btn" @click="triggerImageUpload" title="插入圖片">
+                  🖼️ 圖片
+                </button>
+                <input 
+                  type="file" 
+                  ref="imageInputRef" 
+                  style="display: none;" 
+                  accept="image/*" 
+                  @change="handleImageUpload"
+                />
+              </div>
+              <div class="editor-panes">
+                <textarea 
+                  v-model="editContent" 
+                  ref="textareaRef"
+                  class="editor-textarea" 
+                  placeholder="在此以 Markdown 格式編輯手冊內容..."
+                ></textarea>
+                <div class="editor-preview markdown-body" v-html="renderedEditMarkdown"></div>
+              </div>
+              <div class="editor-footer">
+                <button class="btn btn-primary" @click="saveEdit">儲存變更</button>
+                <button class="btn btn-secondary" @click="cancelEdit">放棄變更</button>
+              </div>
+            </div>
+
+            <!-- Tab 1: 學習地圖 Markdown (唯讀) -->
+            <div v-else-if="!isEditing && activeTab === 'readme'" class="markdown-body" v-html="renderedMarkdown"></div>
             
             <!-- Tab 2: 核心概念精要 -->
-            <div v-else-if="activeTab === 'concepts'" class="concepts-view">
+            <div v-else-if="!isEditing && activeTab === 'concepts'" class="concepts-view">
               <div class="concepts-grid">
                 <div 
                   v-for="(concept, idx) in store.currentNotebook?.meta?.concepts || []" 
@@ -131,7 +175,7 @@
             </div>
             
             <!-- Tab 3: 常見盲點與誤區 -->
-            <div v-else-if="activeTab === 'misconceptions'" class="misconceptions-view">
+            <div v-else-if="!isEditing && activeTab === 'misconceptions'" class="misconceptions-view">
               <div class="misconceptions-list">
                 <div 
                   v-for="(item, idx) in store.currentNotebook?.meta?.misconceptions || []" 
@@ -204,6 +248,151 @@ const progressPercent = ref(0)
 const activeTab = ref('readme')
 const isSaving = ref(false)
 const expandedConcepts = ref({})
+
+// 編輯與匯出新增變數
+const isEditing = ref(false)
+const editContent = ref('')
+const isExporting = ref(false)
+const textareaRef = ref(null)
+const imageInputRef = ref(null)
+
+const renderedEditMarkdown = computed(() => {
+  return marked.parse(editContent.value)
+})
+
+const toggleEdit = () => {
+  if (isEditing.value) {
+    cancelEdit()
+  } else {
+    activeTab.value = 'readme' // 進入編輯模式時，強制到第一個 Tab
+    editContent.value = store.currentNotebook.content
+    isEditing.value = true
+  }
+}
+
+const cancelEdit = () => {
+  if (confirm('確定要放棄所有未儲存的變更嗎？')) {
+    isEditing.value = false
+    editContent.value = ''
+  }
+}
+
+const saveEdit = () => {
+  store.currentNotebook.content = editContent.value
+  store.saveLocalNotebook(store.currentNotebook) // 自動更新至 localStorage
+  isEditing.value = false
+  alert('本地修改已儲存！若已連線 Google Drive，別忘了點擊「同步更新雲端」以完成雲端備份。')
+}
+
+const insertFormat = (type) => {
+  const textarea = textareaRef.value
+  if (!textarea) return
+  
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const text = textarea.value
+  const selectedText = text.substring(start, end)
+  
+  let replacement = ''
+  if (type === 'u') {
+    replacement = `<u>${selectedText || '底線文字'}</u>`
+  } else if (type === 'mark') {
+    replacement = `<mark style="background-color: #fef08a;">${selectedText || '標記文字'}</mark>`
+  }
+  
+  editContent.value = text.substring(0, start) + replacement + text.substring(end)
+  
+  setTimeout(() => {
+    textarea.focus()
+    textarea.setSelectionRange(start + replacement.length, start + replacement.length)
+  }, 50)
+}
+
+const triggerImageUpload = () => {
+  imageInputRef.value.click()
+}
+
+const handleImageUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  store.startLoading('正在上傳圖片至您的 Google Drive...')
+  try {
+    const { uploadImageToDrive } = await import('../services/googleDrive')
+    const imageUrl = await uploadImageToDrive(file)
+    
+    const textarea = textareaRef.value
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = textarea.value
+    const imgMarkdown = `\n![${file.name}](${imageUrl})\n`
+    
+    editContent.value = text.substring(0, start) + imgMarkdown + text.substring(end)
+    
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + imgMarkdown.length, start + imgMarkdown.length)
+    }, 50)
+    
+    alert('圖片上傳成功，已自動插入編輯器！')
+  } catch (err) {
+    console.error(err)
+    alert('圖片上傳失敗: ' + err.message)
+  } finally {
+    store.stopLoading()
+    event.target.value = ''
+  }
+}
+
+const exportDoc = async () => {
+  if (!store.currentNotebook) return
+  
+  isExporting.value = true
+  store.startLoading('正在將手冊轉存為 Google Doc...')
+  try {
+    const { exportToGoogleDoc } = await import('../services/googleDrive')
+    const bodyHtml = marked.parse(store.currentNotebook.content)
+    
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; }
+          h1 { color: #4f46e5; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+          h2 { color: #7c3aed; margin-top: 24px; border-left: 4px solid #7c3aed; padding-left: 8px; }
+          h3 { color: #2563eb; }
+          p, li { font-size: 11pt; color: #334155; }
+          u { text-decoration: underline; }
+          mark { background-color: #fef08a; padding: 2px 4px; }
+          blockquote { border-left: 4px solid #6366f1; padding: 10px; background-color: #f8fafc; color: #475569; font-style: italic; }
+        </style>
+      </head>
+      <body>
+        <h1>${store.currentNotebook.name}</h1>
+        ${bodyHtml}
+      </body>
+      </html>
+    `
+    
+    const docId = await exportToGoogleDoc(store.currentNotebook.name, fullHtml)
+    const docUrl = `https://docs.google.com/document/d/${docId}/edit`
+    
+    alert('匯出成功！已為您在新分頁開啟該 Google Doc。')
+    window.open(docUrl, '_blank')
+  } catch (err) {
+    console.error(err)
+    alert('匯出 Google Doc 失敗: ' + err.message)
+  } finally {
+    store.stopLoading()
+    isExporting.value = false
+  }
+}
+
+const exportPDF = () => {
+  window.print()
+}
 
 const suggestions = ['量子力學基礎', 'Rust 異步程式設計', '古典音樂賞析', '世界咖啡烘焙學']
 
@@ -926,5 +1115,111 @@ const saveToDrive = async () => {
   .concept-header h3 {
     font-size: 1rem;
   }
+}
+
+/* ================= 編輯器新增樣式 ================= */
+.editor-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: fadeIn 0.3s ease-out;
+  box-sizing: border-box;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .editor-toolbar {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.toolbar-btn {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all var(--transition-fast);
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-primary);
+}
+
+.editor-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  min-height: 450px;
+  height: 60vh;
+}
+
+@media (max-width: 992px) {
+  .editor-panes {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+.editor-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  resize: vertical;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  padding: 1rem;
+  line-height: 1.5;
+  outline: none;
+}
+
+[data-theme="light"] .editor-textarea {
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+}
+
+.editor-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--glass-border-focus);
+}
+
+.editor-preview {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.01);
+  height: 100%;
+  min-height: 300px;
+}
+
+[data-theme="light"] .editor-preview {
+  background: #ffffff;
+}
+
+.editor-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--glass-border);
 }
 </style>

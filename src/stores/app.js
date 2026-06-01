@@ -95,6 +95,32 @@ export const useAppStore = defineStore('app', {
       localStorage.setItem('local_notebooks', JSON.stringify(this.localNotebooks))
     },
     
+    async deleteNotebook(id) {
+      if (id.startsWith('temp_')) {
+        this.deleteLocalNotebook(id)
+        if (this.currentNotebook && this.currentNotebook.id === id) {
+          this.currentNotebook = null
+        }
+        return
+      }
+      
+      // 動態導入 googleDrive 服務以避免循環引用
+      const { deleteNotebookFromDrive } = await import('../services/googleDrive')
+      this.startLoading('正在將手冊移至雲端硬碟垃圾桶...')
+      try {
+        await deleteNotebookFromDrive(id)
+        this.notebooks = this.notebooks.filter(nb => nb.id !== id)
+        if (this.currentNotebook && this.currentNotebook.id === id) {
+          this.currentNotebook = null
+        }
+      } catch (err) {
+        console.error('從雲端刪除手冊失敗:', err)
+        throw err
+      } finally {
+        this.stopLoading()
+      }
+    },
+    
     // 登入成功
     setAuth(token, expiresIn, profile = null) {
       this.googleToken = token

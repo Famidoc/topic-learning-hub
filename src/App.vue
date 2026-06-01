@@ -89,14 +89,31 @@
 
         <!-- 手冊歷史清單區 -->
         <div class="notebooks-list-section">
-          <div class="section-title">我的學習手冊</div>
+          <div class="section-title" v-if="store.sidebarOpen || isMobileMenuOpen">我的學習手冊</div>
+          
+          <!-- 搜尋欄位 -->
+          <div class="search-wrap" v-if="store.sidebarOpen || isMobileMenuOpen">
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="搜尋手冊..." 
+              class="search-input"
+            />
+            <span class="search-icon" v-if="!searchQuery">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+          </div>
+
           <div class="notebooks-scroll">
-            <div v-if="store.allNotebooks.length === 0" class="empty-list">
-              目前無任何手冊存檔。
+            <div v-if="filteredNotebooks.length === 0" class="empty-list">
+              {{ searchQuery ? '未找到符合的手冊。' : '目前無任何手冊存檔。' }}
             </div>
             <div 
               v-else 
-              v-for="nb in store.allNotebooks" 
+              v-for="nb in filteredNotebooks" 
               :key="nb.id"
               :class="['notebook-item', { active: store.currentNotebook?.id === nb.id }]"
               @click="loadNotebook(nb)"
@@ -107,6 +124,18 @@
               </svg>
               <span class="notebook-name">{{ nb.name }}</span>
               <span v-if="nb.isLocal" class="local-tag">本地</span>
+              
+              <!-- 刪除按鈕 -->
+              <button 
+                class="btn-delete-notebook" 
+                @click.stop="confirmDelete(nb)"
+                title="刪除手冊"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -145,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from './stores/app'
 import { useRouter } from 'vue-router'
 import { initGapiClient, initTokenClientHelper, syncNotebooksList, loadNotebookFromDrive } from './services/googleDrive'
@@ -155,6 +184,28 @@ const router = useRouter()
 
 // 手機版選單狀態
 const isMobileMenuOpen = ref(false)
+
+// 搜尋與篩選邏輯
+const searchQuery = ref('')
+
+const filteredNotebooks = computed(() => {
+  if (!searchQuery.value) return store.allNotebooks
+  return store.allNotebooks.filter(nb => 
+    nb.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+const confirmDelete = async (nb) => {
+  const source = nb.isLocal ? '本地暫存' : 'Google Drive 雲端'
+  const target = nb.isLocal ? '' : '（檔案將會被移至您雲端的垃圾桶）'
+  if (confirm(`確定要刪除「${nb.name}」嗎？\n這將會自您的 ${source} 中刪除！${target}`)) {
+    try {
+      await store.deleteNotebook(nb.id)
+    } catch (e) {
+      alert('刪除失敗: ' + e.message)
+    }
+  }
+}
 
 const createNewManual = () => {
   store.currentNotebook = null
@@ -644,5 +695,73 @@ onMounted(async () => {
     height: calc(100vh - 60px);
     width: 100% !important;
   }
+}
+
+/* 搜尋與刪除功能新增樣式 */
+.search-wrap {
+  position: relative;
+  margin: 0 0.5rem 0.75rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.4rem 2rem 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.notebook-item {
+  position: relative;
+  padding-right: 2.2rem !important; /* 保留右側位置給刪除按鈕 */
+}
+
+.btn-delete-notebook {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  opacity: 0; /* 預設隱藏 */
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notebook-item:hover .btn-delete-notebook {
+  opacity: 1; /* hover 時顯示 */
+}
+
+.btn-delete-notebook:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-danger);
 }
 </style>

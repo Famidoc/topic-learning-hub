@@ -326,3 +326,157 @@ export async function loadNotebookFromDrive(fileId) {
     meta: metaData
   }
 }
+
+/**
+ * 從雲端將檔案移入垃圾桶
+ */
+export async function deleteNotebookFromDrive(fileId) {
+  const store = useAppStore()
+  if (!store.isAuthenticated) throw new Error('雲端硬碟尚未授權')
+  
+  await initGapiClient()
+  await window.gapi.client.drive.files.update({
+    fileId: fileId,
+    resource: { trashed: true }
+  })
+}
+
+/**
+ * 匯出為 Google Doc 格式以利 NotebookLM 匯入
+ */
+export async function exportToGoogleDoc(name, htmlContent) {
+  const store = useAppStore()
+  if (!store.isAuthenticated) throw new Error('雲端硬碟尚未授權')
+  
+  await initGapiClient()
+  const folderId = await getOrCreateFolder()
+  
+  const boundary = 'foo_bar_baz_boundary_doc'
+  const delimiter = `\n--${boundary}\n`
+  const closeDelimiter = `\n--${boundary}--`
+  
+  const metadata = {
+    name: name,
+    mimeType: 'application/vnd.google-apps.document',
+    parents: [folderId]
+  }
+  
+  const multipartRequestBody =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\n\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    'Content-Type: text/html; charset=UTF-8\n\n' +
+    htmlContent +
+    closeDelimiter
+    
+  const request = window.gapi.client.request({
+    path: '/upload/drive/v3/files',
+    method: 'POST',
+    params: { uploadType: 'multipart' },
+    headers: {
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
+    body: multipartRequestBody
+  })
+  
+  const res = await request
+  return res.result.id
+}
+
+/**
+ * 尋找或建立圖片專用子資料夾
+ */
+async function getOrCreateAssetsFolder(parentFolderId) {
+  const folderName = 'assets'
+  try {
+    const response = await window.gapi.client.drive.files.list({
+      q: `name = '${folderName}' and '${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id)',
+      spaces: 'drive'
+    })
+    const files = response.result.files
+    if (files && files.length > 0) {
+      return files[0].id
+    }
+    
+    const fileMetadata = {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentFolderId]
+    }
+    const createRes = await window.gapi.client.drive.files.create({
+      resource: fileMetadata,
+      fields: 'id'
+    })
+    return createRes.result.id
+  } catch (err) {
+    console.error('建立 assets 資料夾出錯:', err)
+    throw err
+  }
+}
+
+/**
+ * 上傳圖片到 Google Drive 並設為公開讀取
+ */
+export async function uploadImageToDrive(file) {
+  const store = useAppStore()
+  if (!store.isAuthenticated) throw new Error('雲端硬碟尚未授權')
+  
+  await initGapiClient()
+  const parentFolderId = await getOrCreateFolder()
+  const assetsFolderId = await getOrCreateAssetsFolder(parentFolderId)
+  
+  const base64Data = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = error => reject(error)
+    reader.readAsDataURL(file)
+  })
+  
+  const boundary = 'foo_bar_baz_boundary_img'
+  const delimiter = `\n--${boundary}\n`
+  const closeDelimiter = `\n--${boundary}--`
+  
+  const metadata = {
+    name: `${Date.now()}_${file.name}`,
+    mimeType: file.type,
+    parents: [assetsFolderId]
+  }
+  
+  const multipartRequestBody =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\n\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    `Content-Type: ${file.type}\n` +
+    'Content-Transfer-Encoding: base64\n\n' +
+    base64Data +
+    closeDelimiter
+    
+  const createRes = await window.gapi.client.request({
+    path: '/upload/drive/v3/files',
+    method: 'POST',
+    params: { uploadType: 'multipart' },
+    headers: {
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
+    body: multipartRequestBody
+  })
+  
+  const imageId = createRes.result.id
+  
+  // 修改權限，使任何人有連結都能讀取圖片
+  await window.gapi.client.drive.permissions.create({
+    fileId: imageId,
+    resource: {
+      role: 'reader',
+      type: 'anyone'
+    }
+  })
+  
+  return `https://docs.google.com/uc?export=download&id=${imageId}`
+}
