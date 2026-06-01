@@ -430,8 +430,10 @@ const exportDoc = async () => {
   try {
     const { exportToGoogleDoc } = await import('../services/googleDrive')
     
-    // 手冊本身已經是 HTML 格式
+    // 將 HTML 中的 <mark> 標籤轉換為 Google Doc 支援的 inline style span 格式
     const bodyHtml = store.currentNotebook.content
+      .replace(/<mark>/g, '<span style="background-color: #fef08a;">')
+      .replace(/<\/mark>/g, '</span>')
     
     const fullHtml = `
       <!DOCTYPE html>

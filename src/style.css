@@ -295,4 +295,19 @@ input:focus, select:focus, textarea:focus {
   .markdown-body p, .markdown-body li {
     color: #334155 !important;
   }
+  
+  /* 強制保留背景色彩與列印標記微調 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  u {
+    text-decoration: underline !important;
+  }
+  
+  mark {
+    background-color: #fef08a !important;
+    color: #000000 !important;
+  }
 }
