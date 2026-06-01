@@ -34,7 +34,7 @@ export const useAppStore = defineStore('app', {
       // 必須設定 Client ID 才能登入 Google，且必須有 Gemini API Key 才能生成內容
       return !!state.googleClientId
     },
-    // 合併雲端與本地手冊列表，方便 Sidebar 統一渲染
+    // 合併雲端與本地手冊列表，方便 Sidebar 統一渲染，並排除重複的 ID 檔案
     allNotebooks: (state) => {
       const locals = state.localNotebooks.map(nb => ({
         id: nb.id,
@@ -42,7 +42,9 @@ export const useAppStore = defineStore('app', {
         isLocal: true,
         updatedTime: nb.updatedTime
       }))
-      return [...locals, ...state.notebooks]
+      const cloudIds = new Set(state.notebooks.map(nb => nb.id))
+      const filteredLocals = locals.filter(nb => !cloudIds.has(nb.id))
+      return [...filteredLocals, ...state.notebooks]
     }
   },
   

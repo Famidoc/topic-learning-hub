@@ -277,11 +277,37 @@ const cancelEdit = () => {
   }
 }
 
-const saveEdit = () => {
+const saveEdit = async () => {
   store.currentNotebook.content = editContent.value
-  store.saveLocalNotebook(store.currentNotebook) // 自動更新至 localStorage
+  
+  if (store.currentNotebook.id && !store.currentNotebook.id.startsWith('temp_')) {
+    if (store.isAuthenticated) {
+      store.startLoading('正在同步更新至雲端硬碟...')
+      try {
+        const { saveNotebookToDrive } = await import('../services/googleDrive')
+        await saveNotebookToDrive(
+          store.currentNotebook.name,
+          store.currentNotebook.content,
+          store.currentNotebook.meta
+        )
+        alert('修改已成功儲存並同步至您的雲端硬碟！')
+      } catch (err) {
+        console.error(err)
+        store.saveLocalNotebook(store.currentNotebook)
+        alert('同步至雲端失敗，已暫存至本地以防遺失：' + err.message)
+      } finally {
+        store.stopLoading()
+      }
+    } else {
+      store.saveLocalNotebook(store.currentNotebook)
+      alert('本地修改已儲存！請連線 Google Drive 以同步雲端。')
+    }
+  } else {
+    store.saveLocalNotebook(store.currentNotebook)
+    alert('本地修改已儲存！')
+  }
+  
   isEditing.value = false
-  alert('本地修改已儲存！若已連線 Google Drive，別忘了點擊「同步更新雲端」以完成雲端備份。')
 }
 
 const insertFormat = (type) => {

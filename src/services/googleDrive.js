@@ -478,5 +478,5 @@ export async function uploadImageToDrive(file) {
     }
   })
   
-  return `https://docs.google.com/uc?export=download&id=${imageId}`
+  return `https://lh3.googleusercontent.com/d/${imageId}`
 }
