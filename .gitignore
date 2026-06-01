@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Google OAuth tokens
+token.json
+.env
+credentials.json
