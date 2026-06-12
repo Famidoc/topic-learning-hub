@@ -222,6 +222,11 @@ input:focus, select:focus, textarea:focus {
   font-style: italic;
 }
 
+/* 螢幕上隱藏列印專用版面 */
+.print-only-layout {
+  display: none !important;
+}
+
 /* ================= 列印樣式最佳化 (PDF 匯出) ================= */
 @media print {
   body {
@@ -309,5 +314,69 @@ input:focus, select:focus, textarea:focus {
   mark {
     background-color: #fef08a !important;
     color: #000000 !important;
+  }
+  
+  /* 隱藏螢幕上單一 Tab 的內容 */
+  .tab-content {
+    display: none !important;
+  }
+  
+  /* 顯示列印版面 */
+  .print-only-layout {
+    display: block !important;
+  }
+  
+  /* 分頁符號，確保三個部分各自佔用獨立的頁面 */
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  .print-section {
+    margin-bottom: 2rem;
+  }
+  
+  .print-section-title {
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+    margin-top: 1rem !important;
+  }
+  
+  /* 強制概念卡片與盲點對照展示 */
+  .concept-card {
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+    padding: 1.25rem !important;
+  }
+  
+  .misconception-card {
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem !important;
+  }
+  
+  .comparison-column.myth {
+    background: rgba(239, 68, 68, 0.05) !important;
+    border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  }
+  
+  .comparison-column.truth {
+    background: rgba(16, 185, 129, 0.05) !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+  }
+  
+  .concepts-view h3, .detail-section h4, .misconception-analysis h4 {
+    color: #0f172a !important;
+  }
+  .summary-text, .detail-section p, .misconception-analysis p, .col-content p {
+    color: #334155 !important;
   }
 }
