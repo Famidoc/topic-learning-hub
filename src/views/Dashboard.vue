@@ -1019,6 +1019,7 @@ const saveToDrive = async () => {
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all var(--transition-fast);
+  flex-shrink: 0; /* 防止被左邊 Tabs 擠壓 */
 }
 
 [data-theme="light"] .speech-controls {
@@ -1038,6 +1039,7 @@ const saveToDrive = async () => {
   transition: all var(--transition-fast);
   font-size: 0.9rem;
   font-weight: 500;
+  white-space: nowrap; /* 強制文字橫向，防折行 */
 }
 
 .speech-btn:hover {
@@ -1063,12 +1065,14 @@ const saveToDrive = async () => {
   width: 1px;
   height: 14px;
   background: var(--glass-border);
+  flex-shrink: 0;
 }
 
 .speech-label {
   font-size: 0.8rem;
   color: var(--text-secondary);
   user-select: none;
+  white-space: nowrap; /* 強制文字橫向，防折行 */
 }
 
 .speech-rate-select {
@@ -1080,6 +1084,7 @@ const saveToDrive = async () => {
   outline: none;
   font-weight: 600;
   padding: 0 0.25rem;
+  white-space: nowrap; /* 強制文字橫向，防折行 */
 }
 
 .speech-rate-select option {
