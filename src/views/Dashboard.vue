@@ -270,6 +270,90 @@
                 </div>
               </div>
             </div>
+
+            <!-- 專供列印的完整手冊版面 (螢幕上隱藏，列印時顯示) -->
+            <div class="print-only-layout">
+              <!-- 第一部分：學習地圖 -->
+              <div class="print-section">
+                <h2 class="print-section-title">一、學習地圖</h2>
+                <div class="markdown-body" v-html="renderedMarkdown"></div>
+              </div>
+              
+              <!-- 第二部分：核心概念精要 -->
+              <div class="print-section print-page-break">
+                <h2 class="print-section-title">二、核心概念精要</h2>
+                <div class="concepts-view">
+                  <div class="concepts-grid">
+                    <div 
+                      v-for="(concept, idx) in store.currentNotebook?.meta?.concepts || []" 
+                      :key="idx" 
+                      class="concept-card glass-panel"
+                      style="cursor: default;"
+                    >
+                      <div class="concept-header">
+                        <div class="concept-title-row">
+                          <span class="concept-num">0{{ idx + 1 }}</span>
+                          <h3>{{ concept.title }}</h3>
+                        </div>
+                      </div>
+                      <div class="concept-brief" style="margin-top: 0.5rem; padding-left: 0;">
+                        <p class="summary-text" style="color: var(--text-primary) !important;">{{ concept.summary }}</p>
+                      </div>
+                      <div class="concept-details" style="display: flex; flex-direction: column; padding-left: 0; border-top: 1px dashed var(--glass-border); margin-top: 1rem; padding-top: 1rem; gap: 1rem;">
+                        <div class="detail-section">
+                          <h4>原理深度剖析</h4>
+                          <p>{{ concept.explanation }}</p>
+                        </div>
+                        <div class="detail-section takeaway" v-if="concept.key_takeaway" style="margin-top: 0.5rem;">
+                          <h4>💡 核心要點記法</h4>
+                          <p>{{ concept.key_takeaway }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 第三部分：常見盲點與誤區 -->
+              <div class="print-section print-page-break">
+                <h2 class="print-section-title">三、常見盲點與誤區</h2>
+                <div class="misconceptions-view">
+                  <div class="misconceptions-list">
+                    <div 
+                      v-for="(item, idx) in store.currentNotebook?.meta?.misconceptions || []" 
+                      :key="idx" 
+                      class="misconception-card glass-panel"
+                    >
+                      <div class="misconception-header">
+                        <span class="myth-badge">盲點對照 0{{ idx + 1 }}</span>
+                      </div>
+                      <div class="comparison-grid">
+                        <div class="comparison-column myth">
+                          <div class="col-header">
+                            <span>常見直覺誤區 (Myth)</span>
+                          </div>
+                          <div class="col-content">
+                            <p>{{ item.myth }}</p>
+                          </div>
+                        </div>
+                        <div class="comparison-column truth">
+                          <div class="col-header">
+                            <span>導正科學事實 (Truth)</span>
+                          </div>
+                          <div class="col-content">
+                            <p>{{ item.truth }}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="misconception-analysis">
+                        <h4>🔍 為什麼直覺會出錯？</h4>
+                        <p>{{ item.explanation }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1569,5 +1653,78 @@ const saveToDrive = async () => {
   margin-top: 0.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--glass-border);
+}
+
+/* 螢幕上隱藏列印專用版面 */
+.print-only-layout {
+  display: none;
+}
+
+/* ================= 列印專用樣式微調 ================= */
+@media print {
+  /* 隱藏螢幕上單一 Tab 的內容 */
+  .tab-content {
+    display: none !important;
+  }
+  
+  /* 顯示列印版面 */
+  .print-only-layout {
+    display: block !important;
+  }
+  
+  /* 分頁符號，確保三個部分各自佔用獨立的頁面 */
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  .print-section {
+    margin-bottom: 2rem;
+  }
+  
+  .print-section-title {
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+    margin-top: 1rem !important;
+  }
+  
+  /* 在列印時，強制概念詳情與盲點細節展示，不受螢幕主題樣式影響 */
+  .concept-card {
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+    padding: 1.25rem !important;
+  }
+  
+  .misconception-card {
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem !important;
+  }
+  
+  .comparison-column.myth {
+    background: rgba(239, 68, 68, 0.05) !important;
+    border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  }
+  
+  .comparison-column.truth {
+    background: rgba(16, 185, 129, 0.05) !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+  }
+  
+  /* 列印時強制文字為深色以利閱讀 */
+  .concepts-view h3, .detail-section h4, .misconception-analysis h4 {
+    color: #0f172a !important;
+  }
+  .summary-text, .detail-section p, .misconception-analysis p, .col-content p {
+    color: #334155 !important;
+  }
 }
 </style>
