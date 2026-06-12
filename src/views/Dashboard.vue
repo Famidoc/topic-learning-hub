@@ -1655,11 +1655,13 @@ const saveToDrive = async () => {
   border-top: 1px solid var(--glass-border);
 }
 
-/* 只在螢幕上隱藏列印專用版面，這樣列印時它預設就是 block (即正常 display) */
-@media screen {
-  .print-only-layout {
-    display: none !important;
-  }
+/* 螢幕上隱藏列印專用版面，將其移出可視區且高度設為 0 */
+.print-only-layout {
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
 /* ================= 列印專用樣式微調 ================= */
@@ -1667,6 +1669,16 @@ const saveToDrive = async () => {
   /* 隱藏螢幕上單一 Tab 的內容 */
   .tab-content {
     display: none !important;
+  }
+  
+  /* 強制在列印時顯示並恢復列印版面的正常排版 */
+  .print-only-layout {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
   }
   
   /* 分頁符號，確保三個部分各自佔用獨立的頁面 */
