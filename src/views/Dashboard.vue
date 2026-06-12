@@ -89,15 +89,44 @@
       <!-- 手冊主要內容區域 -->
       <div class="reader-content-layout">
         <div class="glass-panel main-document">
-          <div class="doc-tabs" v-if="!isEditing">
-            <button 
-              v-for="tab in ['readme', 'concepts', 'misconceptions']" 
-              :key="tab"
-              :class="['tab-btn', { active: activeTab === tab }]"
-              @click="activeTab = tab"
-            >
-              {{ tabName(tab) }}
-            </button>
+          <div class="tabs-header-row" v-if="!isEditing">
+            <div class="doc-tabs">
+              <button 
+                v-for="tab in ['readme', 'concepts', 'misconceptions']" 
+                :key="tab"
+                :class="['tab-btn', { active: activeTab === tab }]"
+                @click="activeTab = tab"
+              >
+                {{ tabName(tab) }}
+              </button>
+            </div>
+
+            <!-- 語音朗讀控制列 -->
+            <div class="speech-controls">
+              <button 
+                class="speech-btn" 
+                :class="{ active: isSpeaking }" 
+                @click="toggleSpeech" 
+                :title="isSpeaking ? '停止朗讀' : '語音朗讀'"
+              >
+                <span class="speech-icon" v-if="isSpeaking">⏹️</span>
+                <span class="speech-icon" v-else>🔊</span>
+                <span class="speech-text">{{ isSpeaking ? '停止' : '朗讀' }}</span>
+              </button>
+              <div class="speech-divider"></div>
+              <label for="speech-rate" class="speech-label">語速：</label>
+              <select 
+                id="speech-rate" 
+                v-model="speechRate" 
+                @change="handleRateChange" 
+                class="speech-rate-select"
+              >
+                <option :value="0.8">0.8x</option>
+                <option :value="1.0">1.0x</option>
+                <option :value="1.2">1.2x</option>
+                <option :value="1.5">1.5x</option>
+              </select>
+            </div>
           </div>
 
           <div class="tab-content">
@@ -249,7 +278,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useAppStore } from '../stores/app'
 import { useRouter } from 'vue-router'
 import { marked } from 'marked'
@@ -367,10 +396,120 @@ const destroyEditor = () => {
   }
 }
 
+// ================= 語音朗讀功能 =================
+const isSpeaking = ref(false)
+const speechRate = ref(1.0)
+let currentUtterance = null
+
+// 輔助函式：去除 HTML 標籤
+const stripHtml = (html) => {
+  if (!html) return ''
+  const temp = document.createElement('div')
+  temp.innerHTML = html
+  return temp.textContent || temp.innerText || ''
+}
+
+// 取得當前分頁要朗讀的內容
+const getSpeechText = () => {
+  if (!store.currentNotebook) return ''
+  
+  if (activeTab.value === 'readme') {
+    const content = store.currentNotebook.content || ''
+    const html = content.trim().startsWith('<') ? content : marked.parse(content)
+    return stripHtml(html)
+  } else if (activeTab.value === 'concepts') {
+    const concepts = store.currentNotebook.meta?.concepts || []
+    if (concepts.length === 0) return '暫無核心概念資料。'
+    return `核心概念精要。共 ${concepts.length} 個概念。` + concepts.map((c, idx) => {
+      return `概念 ${idx + 1}：${c.title}。內容摘要：${c.summary}。詳細原理剖析：${c.explanation}。${c.key_takeaway ? `核心要點記法：${c.key_takeaway}。` : ''}`
+    }).join(' ')
+  } else if (activeTab.value === 'misconceptions') {
+    const misconceptions = store.currentNotebook.meta?.misconceptions || []
+    if (misconceptions.length === 0) return '暫無常見盲點資料。'
+    return `常見盲點與誤區。共 ${misconceptions.length} 個盲點對照。` + misconceptions.map((m, idx) => {
+      return `盲點對照 ${idx + 1}。常見直覺誤區：${m.myth}。導正科學事實：${m.truth}。為什麼直覺會出錯：${m.explanation}`
+    }).join(' ')
+  }
+  return ''
+}
+
+// 切換朗讀狀態
+const toggleSpeech = () => {
+  const synth = window.speechSynthesis
+  if (!synth) {
+    alert('您的瀏覽器不支援語音朗讀功能。')
+    return
+  }
+
+  if (isSpeaking.value) {
+    synth.cancel()
+    isSpeaking.value = false
+    currentUtterance = null
+  } else {
+    const text = getSpeechText()
+    if (!text.trim()) {
+      alert('當前頁面沒有可朗讀的文字內容。')
+      return
+    }
+
+    synth.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'zh-TW'
+    utterance.rate = speechRate.value
+    
+    utterance.onend = () => {
+      isSpeaking.value = false
+      currentUtterance = null
+    }
+
+    utterance.onerror = (event) => {
+      console.error('語音朗讀出錯:', event)
+      isSpeaking.value = false
+      currentUtterance = null
+    }
+
+    currentUtterance = utterance
+    isSpeaking.value = true
+    synth.speak(utterance)
+  }
+}
+
+// 停止朗讀
+const stopSpeech = () => {
+  const synth = window.speechSynthesis
+  if (synth) {
+    synth.cancel()
+  }
+  isSpeaking.value = false
+  currentUtterance = null
+}
+
+// 監聽語速改變，若正在朗讀則重啟
+const handleRateChange = () => {
+  if (isSpeaking.value) {
+    stopSpeech()
+    setTimeout(() => {
+      toggleSpeech()
+    }, 150)
+  }
+}
+
+// 監聽生命週期與狀態變化，自動停止朗讀
+watch(activeTab, () => {
+  stopSpeech()
+})
+
+watch(isEditing, (val) => {
+  if (val) {
+    stopSpeech()
+  }
+})
+
 // 預防組件被銷毀時編輯器記憶體洩露
-import { onBeforeUnmount } from 'vue'
 onBeforeUnmount(() => {
   destroyEditor()
+  stopSpeech()
 })
 
 // Tiptap 工具列指令與狀態判定
@@ -557,6 +696,7 @@ const generateHandbook = async () => {
 }
 
 const closeNotebook = () => {
+  stopSpeech()
   store.currentNotebook = null
   topicInput.value = ''
 }
@@ -851,12 +991,109 @@ const saveToDrive = async () => {
   padding: 2rem;
 }
 
+.tabs-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .doc-tabs {
   display: flex;
   gap: 1rem;
-  border-bottom: 1px solid var(--glass-border);
-  padding-bottom: 1rem;
-  margin-bottom: 1.5rem;
+}
+
+/* 語音朗讀控制列樣式 */
+.speech-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-fast);
+}
+
+[data-theme="light"] .speech-controls {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.speech-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 99px;
+  transition: all var(--transition-fast);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.speech-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent-primary);
+}
+
+[data-theme="light"] .speech-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.speech-btn.active {
+  color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+.speech-btn.active .speech-icon {
+  animation: pulse-slow 2s infinite ease-in-out;
+}
+
+.speech-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--glass-border);
+}
+
+.speech-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.speech-rate-select {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  font-weight: 600;
+  padding: 0 0.25rem;
+}
+
+.speech-rate-select option {
+  background: var(--bg-primary, #0f172a);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .speech-rate-select option {
+  background: #ffffff;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
 }
 
 .doc-tabs .tab-btn {
@@ -1174,6 +1411,19 @@ const saveToDrive = async () => {
     min-width: 0;
   }
   
+  /* 標籤頁與語音控制列自適應排版 */
+  .tabs-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+  }
+  
+  .speech-controls {
+    justify-content: center;
+    width: 100%;
+  }
+
   /* 標籤頁自適應滾動 */
   .doc-tabs {
     overflow-x: auto;
