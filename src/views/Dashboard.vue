@@ -102,7 +102,7 @@
             </div>
 
             <!-- 語音朗讀控制列 -->
-            <div class="speech-controls">
+            <div class="speech-controls no-print">
               <button 
                 class="speech-btn" 
                 :class="{ active: isSpeaking }" 
@@ -1655,9 +1655,11 @@ const saveToDrive = async () => {
   border-top: 1px solid var(--glass-border);
 }
 
-/* 螢幕上隱藏列印專用版面 */
-.print-only-layout {
-  display: none;
+/* 只在螢幕上隱藏列印專用版面，這樣列印時它預設就是 block (即正常 display) */
+@media screen {
+  .print-only-layout {
+    display: none !important;
+  }
 }
 
 /* ================= 列印專用樣式微調 ================= */
@@ -1665,11 +1667,6 @@ const saveToDrive = async () => {
   /* 隱藏螢幕上單一 Tab 的內容 */
   .tab-content {
     display: none !important;
-  }
-  
-  /* 顯示列印版面 */
-  .print-only-layout {
-    display: block !important;
   }
   
   /* 分頁符號，確保三個部分各自佔用獨立的頁面 */
