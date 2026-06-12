@@ -270,85 +270,85 @@
                 </div>
               </div>
             </div>
+          </div> <!-- 正確結束 tab-content -->
 
-            <!-- 專供列印的完整手冊版面 (螢幕上隱藏，列印時顯示) -->
-            <div class="print-only-layout">
-              <!-- 第一部分：學習地圖 -->
-              <div class="print-section">
-                <h2 class="print-section-title">一、學習地圖</h2>
-                <div class="markdown-body" v-html="renderedMarkdown"></div>
-              </div>
-              
-              <!-- 第二部分：核心概念精要 -->
-              <div class="print-section print-page-break">
-                <h2 class="print-section-title">二、核心概念精要</h2>
-                <div class="concepts-view">
-                  <div class="concepts-grid">
-                    <div 
-                      v-for="(concept, idx) in store.currentNotebook?.meta?.concepts || []" 
-                      :key="idx" 
-                      class="concept-card glass-panel"
-                      style="cursor: default;"
-                    >
-                      <div class="concept-header">
-                        <div class="concept-title-row">
-                          <span class="concept-num">0{{ idx + 1 }}</span>
-                          <h3>{{ concept.title }}</h3>
-                        </div>
+          <!-- 專供列印的完整手冊版面 (螢幕上隱藏，列印時顯示) -->
+          <div class="print-only-layout">
+            <!-- 第一部分：學習地圖 -->
+            <div class="print-section">
+              <h2 class="print-section-title">一、學習地圖</h2>
+              <div class="markdown-body" v-html="renderedMarkdown"></div>
+            </div>
+            
+            <!-- 第二部分：核心概念精要 -->
+            <div class="print-section print-page-break">
+              <h2 class="print-section-title">二、核心概念精要</h2>
+              <div class="concepts-view">
+                <div class="concepts-grid">
+                  <div 
+                    v-for="(concept, idx) in store.currentNotebook?.meta?.concepts || []" 
+                    :key="idx" 
+                    class="concept-card glass-panel"
+                    style="cursor: default;"
+                  >
+                    <div class="concept-header">
+                      <div class="concept-title-row">
+                        <span class="concept-num">0{{ idx + 1 }}</span>
+                        <h3>{{ concept.title }}</h3>
                       </div>
-                      <div class="concept-brief" style="margin-top: 0.5rem; padding-left: 0;">
-                        <p class="summary-text" style="color: var(--text-primary) !important;">{{ concept.summary }}</p>
+                    </div>
+                    <div class="concept-brief" style="margin-top: 0.5rem; padding-left: 0;">
+                      <p class="summary-text" style="color: var(--text-primary) !important;">{{ concept.summary }}</p>
+                    </div>
+                    <div class="concept-details" style="display: flex; flex-direction: column; padding-left: 0; border-top: 1px dashed var(--glass-border); margin-top: 1rem; padding-top: 1rem; gap: 1rem;">
+                      <div class="detail-section">
+                        <h4>原理深度剖析</h4>
+                        <p>{{ concept.explanation }}</p>
                       </div>
-                      <div class="concept-details" style="display: flex; flex-direction: column; padding-left: 0; border-top: 1px dashed var(--glass-border); margin-top: 1rem; padding-top: 1rem; gap: 1rem;">
-                        <div class="detail-section">
-                          <h4>原理深度剖析</h4>
-                          <p>{{ concept.explanation }}</p>
-                        </div>
-                        <div class="detail-section takeaway" v-if="concept.key_takeaway" style="margin-top: 0.5rem;">
-                          <h4>💡 核心要點記法</h4>
-                          <p>{{ concept.key_takeaway }}</p>
-                        </div>
+                      <div class="detail-section takeaway" v-if="concept.key_takeaway" style="margin-top: 0.5rem;">
+                        <h4>💡 核心要點記法</h4>
+                        <p>{{ concept.key_takeaway }}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <!-- 第三部分：常見盲點與誤區 -->
-              <div class="print-section print-page-break">
-                <h2 class="print-section-title">三、常見盲點與誤區</h2>
-                <div class="misconceptions-view">
-                  <div class="misconceptions-list">
-                    <div 
-                      v-for="(item, idx) in store.currentNotebook?.meta?.misconceptions || []" 
-                      :key="idx" 
-                      class="misconception-card glass-panel"
-                    >
-                      <div class="misconception-header">
-                        <span class="myth-badge">盲點對照 0{{ idx + 1 }}</span>
-                      </div>
-                      <div class="comparison-grid">
-                        <div class="comparison-column myth">
-                          <div class="col-header">
-                            <span>常見直覺誤區 (Myth)</span>
-                          </div>
-                          <div class="col-content">
-                            <p>{{ item.myth }}</p>
-                          </div>
+            </div>
+            
+            <!-- 第三部分：常見盲點與誤區 -->
+            <div class="print-section print-page-break">
+              <h2 class="print-section-title">三、常見盲點與誤區</h2>
+              <div class="misconceptions-view">
+                <div class="misconceptions-list">
+                  <div 
+                    v-for="(item, idx) in store.currentNotebook?.meta?.misconceptions || []" 
+                    :key="idx" 
+                    class="misconception-card glass-panel"
+                  >
+                    <div class="misconception-header">
+                      <span class="myth-badge">盲點對照 0{{ idx + 1 }}</span>
+                    </div>
+                    <div class="comparison-grid">
+                      <div class="comparison-column myth">
+                        <div class="col-header">
+                          <span>常見直覺誤區 (Myth)</span>
                         </div>
-                        <div class="comparison-column truth">
-                          <div class="col-header">
-                            <span>導正科學事實 (Truth)</span>
-                          </div>
-                          <div class="col-content">
-                            <p>{{ item.truth }}</p>
-                          </div>
+                        <div class="col-content">
+                          <p>{{ item.myth }}</p>
                         </div>
                       </div>
-                      <div class="misconception-analysis">
-                        <h4>🔍 為什麼直覺會出錯？</h4>
-                        <p>{{ item.explanation }}</p>
+                      <div class="comparison-column truth">
+                        <div class="col-header">
+                          <span>導正科學事實 (Truth)</span>
+                        </div>
+                        <div class="col-content">
+                          <p>{{ item.truth }}</p>
+                        </div>
                       </div>
+                    </div>
+                    <div class="misconception-analysis">
+                      <h4>🔍 為什麼直覺會出錯？</h4>
+                      <p>{{ item.explanation }}</p>
                     </div>
                   </div>
                 </div>

@@ -381,4 +381,13 @@ input:focus, select:focus, textarea:focus {
   .summary-text, .detail-section p, .misconception-analysis p, .col-content p {
     color: #334155 !important;
   }
+  
+  /* 防止列印時因為 CSS 動畫卡在 initial/from 狀態 (opacity: 0) 而導致內容空白 */
+  .concepts-view,
+  .misconceptions-view {
+    animation: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
 }
+
