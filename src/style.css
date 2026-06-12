@@ -222,9 +222,11 @@ input:focus, select:focus, textarea:focus {
   font-style: italic;
 }
 
-/* 螢幕上隱藏列印專用版面 */
-.print-only-layout {
-  display: none !important;
+/* 只在螢幕上隱藏列印專用版面，在列印時它預設就會顯示 */
+@media screen {
+  .print-only-layout {
+    display: none !important;
+  }
 }
 
 /* ================= 列印樣式最佳化 (PDF 匯出) ================= */
