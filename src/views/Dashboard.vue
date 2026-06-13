@@ -653,11 +653,73 @@ const exportDoc = async () => {
   try {
     const { exportToGoogleDoc } = await import('../services/googleDrive')
     
+    // 1. 第一部分：學習地圖 (將 Markdown 轉換為 HTML)
+    let bodyHtml = store.currentNotebook.content || ''
+    if (!bodyHtml.trim().startsWith('<')) {
+      bodyHtml = marked.parse(bodyHtml)
+    }
+    
     // 將 HTML 中的 <mark> 標籤轉換為 Google Doc 支援的 inline style span 格式
-    const bodyHtml = store.currentNotebook.content
+    bodyHtml = bodyHtml
       .replace(/<mark>/g, '<span style="background-color: #fef08a;">')
       .replace(/<\/mark>/g, '</span>')
-    
+      
+    // 2. 第二部分：核心概念精要
+    let conceptsHtml = ''
+    const concepts = store.currentNotebook?.meta?.concepts || []
+    if (concepts.length > 0) {
+      conceptsHtml = concepts.map((concept, idx) => `
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; background-color: #f8fafc;">
+          <h3 style="color: #4f46e5; margin-top: 0; font-size: 14pt;">0${idx + 1} ${concept.title}</h3>
+          <p style="font-weight: bold; color: #334155; font-size: 11pt; margin-bottom: 8px;">摘要：${concept.summary}</p>
+          <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 10px 0;" />
+          <div style="margin-top: 10px;">
+            <h4 style="margin: 5px 0; color: #0f172a; font-size: 11pt;">原理深度剖析</h4>
+            <p style="color: #475569; margin: 5px 0; font-size: 11pt;">${concept.explanation}</p>
+          </div>
+          ${concept.key_takeaway ? `
+          <div style="margin-top: 12px; background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 10px; border-radius: 4px;">
+            <h4 style="margin: 0 0 5px 0; color: #15803d; font-size: 11pt;">💡 核心要點記法</h4>
+            <p style="color: #166534; margin: 0; font-size: 11pt;">${concept.key_takeaway}</p>
+          </div>
+          ` : ''}
+        </div>
+      `).join('')
+    } else {
+      conceptsHtml = '<p style="font-size: 11pt; color: #6b7280; font-style: italic;">暫無核心概念資料。</p>'
+    }
+
+    // 3. 第三部分：常見盲點與誤區
+    let misconceptionsHtml = ''
+    const misconceptions = store.currentNotebook?.meta?.misconceptions || []
+    if (misconceptions.length > 0) {
+      misconceptionsHtml = misconceptions.map((item, idx) => `
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 25px; background-color: #f8fafc;">
+          <h3 style="color: #9333ea; margin-top: 0; font-size: 14pt;">盲點對照 0${idx + 1}</h3>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-top: 12px; margin-bottom: 12px;">
+            <tr>
+              <td style="width: 50%; padding: 12px; background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 4px; vertical-align: top;">
+                <strong style="color: #dc2626; font-size: 11pt;">❌ 常見直覺誤區 (Myth)</strong>
+                <p style="color: #991b1b; margin: 8px 0 0 0; font-size: 11pt;">${item.myth}</p>
+              </td>
+              <td style="width: 50%; padding: 12px; background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; vertical-align: top;">
+                <strong style="color: #16a34a; font-size: 11pt;">✅ 導正科學事實 (Truth)</strong>
+                <p style="color: #166534; margin: 8px 0 0 0; font-size: 11pt;">${item.truth}</p>
+              </td>
+            </tr>
+          </table>
+          
+          <div style="margin-top: 10px;">
+            <h4 style="margin: 5px 0; color: #0f172a; font-size: 11pt;">🔍 為什麼直覺會出錯？</h4>
+            <p style="color: #475569; margin: 5px 0; font-size: 11pt;">${item.explanation}</p>
+          </div>
+        </div>
+      `).join('')
+    } else {
+      misconceptionsHtml = '<p style="font-size: 11pt; color: #6b7280; font-style: italic;">暫無常見盲點資料。</p>'
+    }
+
     const fullHtml = `
       <!DOCTYPE html>
       <html>
@@ -666,7 +728,7 @@ const exportDoc = async () => {
         <style>
           body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; }
           h1 { color: #4f46e5; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-          h2 { color: #7c3aed; margin-top: 24px; border-left: 4px solid #7c3aed; padding-left: 8px; }
+          h2 { color: #7c3aed; margin-top: 24px; border-left: 4px solid #7c3aed; padding-left: 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
           h3 { color: #2563eb; }
           p, li { font-size: 11pt; color: #334155; }
           u { text-decoration: underline; }
@@ -676,8 +738,22 @@ const exportDoc = async () => {
         </style>
       </head>
       <body>
-        <h1>${store.currentNotebook.name}</h1>
-        ${bodyHtml}
+        <h1 style="text-align: center; color: #4f46e5; font-size: 24pt; margin-bottom: 30px;">${store.currentNotebook.name}</h1>
+        
+        <div style="margin-bottom: 30px;">
+          <h2 style="color: #4f46e5; font-size: 18pt;">一、學習地圖</h2>
+          ${bodyHtml}
+        </div>
+        
+        <div style="page-break-before: always; margin-top: 30px; margin-bottom: 30px;">
+          <h2 style="color: #7c3aed; font-size: 18pt;">二、核心概念精要</h2>
+          ${conceptsHtml}
+        </div>
+        
+        <div style="page-break-before: always; margin-top: 30px;">
+          <h2 style="color: #2563eb; font-size: 18pt;">三、常見盲點與誤區</h2>
+          ${misconceptionsHtml}
+        </div>
       </body>
       </html>
     `
