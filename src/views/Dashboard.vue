@@ -780,7 +780,7 @@ const suggestions = ['量子力學基礎', 'Rust 異步程式設計', '古典音
 
 const tabName = (tab) => {
   const names = {
-    readme: '學習地圖 (Markdown)',
+    readme: '學習地圖',
     concepts: '核心概念精要',
     misconceptions: '常見盲點與誤區'
   }
@@ -1554,11 +1554,12 @@ const saveToDrive = async () => {
   .reader-actions {
     width: 100%;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
   
   .reader-actions button {
-    flex: 1;
+    flex: 1 1 120px;
     font-size: 0.85rem;
     padding: 0.6rem 0.5rem;
     white-space: nowrap;
@@ -1589,8 +1590,8 @@ const saveToDrive = async () => {
     width: 100%;
   }
 
-  /* 標籤頁自適應滾動 */
   .doc-tabs {
+    width: 100%;
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
