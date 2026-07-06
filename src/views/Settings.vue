@@ -82,6 +82,22 @@
             </div>
             <span class="tip">金鑰會安全地保存在您瀏覽器的 LocalStorage，不會發送到任何第三方伺服器。</span>
           </div>
+
+          <div class="divider"></div>
+
+          <div class="form-group">
+            <label>生成偏好設定</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  v-model="annotateKeyTerms"
+                />
+                <span class="checkbox-text">為第一次出現的關鍵名詞加註英文</span>
+              </label>
+              <span class="tip">啟用此選項後，在生成學習手冊時，所有內容中第一次出現的專業術語或關鍵概念將會自動附上英文對照（例如：機器學習 (Machine Learning)）。</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -114,6 +130,7 @@ const router = useRouter()
 const clientId = ref(store.googleClientId)
 const apiKey = ref(store.geminiApiKey)
 const showApiKey = ref(false)
+const annotateKeyTerms = ref(store.annotateKeyTerms)
 
 const saveSettings = () => {
   if (!clientId.value) {
@@ -123,6 +140,7 @@ const saveSettings = () => {
   
   store.setGoogleClientId(clientId.value)
   store.setGeminiApiKey(apiKey.value)
+  store.setAnnotateKeyTerms(annotateKeyTerms.value)
   
   // 重新初始化 GIS
   initTokenClientHelper()
@@ -322,5 +340,41 @@ const saveSettings = () => {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
+}
+
+.divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 1.5rem 0;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  accent-color: var(--accent-secondary);
+}
+
+.checkbox-text {
+  font-weight: 500;
 }
 </style>

@@ -15,6 +15,10 @@ export async function generateLearningManual(topic) {
     throw new Error('未設定 Gemini API 金鑰，請先至「設定」頁面進行配置')
   }
   
+  const annotateInstruction = store.annotateKeyTerms 
+    ? '\n5. 請在生成的所有內容（包括 markdown_content、concepts 的 summary 及 explanation 等）中，為第一次出現的專業術語與關鍵名詞（Key Terms）在括號中加註英文對照（格式如：名詞 (English translation)，例如：機器學習 (Machine Learning)）。之後再次出現該詞時則無需加註。'
+    : ''
+
   const systemInstruction = `
 你是一位世界級的學習設計專家與學術導師。
 你的任務是為用戶輸入的主題建構一份結構化的「主題學習手冊」。
@@ -46,7 +50,7 @@ JSON Schema 格式必須嚴格如下：
 1. concepts 陣列中請包含該主題最核心的 3 到 5 個關鍵概念。
 2. misconceptions 陣列中請包含新手最容易犯、最嚴重的 2 到 4 個觀念誤區。
 3. markdown_content 請撰寫得條理清晰、語氣鼓勵、且具備實用的引導步驟（一步一步來）。
-4. 請全部以「繁體中文（traditional Chinese）」撰寫。
+4. 請全部以「繁體中文（traditional Chinese）」撰寫。${annotateInstruction}
 `
 
   const requestBody = {

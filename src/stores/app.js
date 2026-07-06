@@ -5,6 +5,7 @@ export const useAppStore = defineStore('app', {
     // API 設定
     googleClientId: localStorage.getItem('google_client_id') || import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
     geminiApiKey: localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '',
+    annotateKeyTerms: localStorage.getItem('annotate_key_terms') !== 'false',
     
     // Auth 狀態
     googleToken: localStorage.getItem('google_token') || null,
@@ -68,6 +69,11 @@ export const useAppStore = defineStore('app', {
     setGeminiApiKey(key) {
       this.geminiApiKey = key
       localStorage.setItem('gemini_api_key', key)
+    },
+    
+    setAnnotateKeyTerms(val) {
+      this.annotateKeyTerms = val
+      localStorage.setItem('annotate_key_terms', val)
     },
     
     // 儲存手冊至本地 LocalStorage
